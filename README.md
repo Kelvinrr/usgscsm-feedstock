@@ -152,3 +152,4 @@ Feedstock Maintainers
 
 * [@jlaura](https://github.com/jlaura/)
 * [@jessemapel](https://github.com/jessemapel/)
+* [@kelvinrr](https://github.com/kelvinrr/)
