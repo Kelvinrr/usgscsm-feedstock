@@ -14,15 +14,20 @@ Revert ALE and CSM submodules
 Remove whitespace fix to make the patch more parseable
 
 Added REQUIRED flag for CSM library and include directory in CMakeLists.txt
+
+Look up csm/csm.h so CSM_INCLUDE_DIR is the parent of csm/, matching the
+#include <csm/...> style used by the sources, and search the Windows
+%LIBRARY_INC% / %LIBRARY_LIB% prefixes as well. Fixes the win_64_ build
+failing with "Cannot open include file: 'csm/Plugin.h'".
 ---
- CMakeLists.txt | 33 ++++++++++++---------------------
- 1 file changed, 12 insertions(+), 21 deletions(-)
+ CMakeLists.txt | 49 ++++++++++++++++++++++++++++---------------------
+ 1 file changed, 28 insertions(+), 21 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c469185..e8302d0 100644
+index 235e79b..8628479 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -69,15 +69,29 @@ set(USGSCSM_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include/usgscsm"
+@@ -69,15 +69,33 @@ set(USGSCSM_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include/usgscsm"
                           "${CMAKE_CURRENT_SOURCE_DIR}"
  )
  
@@ -30,14 +35,14 @@ index c469185..e8302d0 100644
 +#
 +# Sources include the CSM headers with the csm/ prefix (#include <csm/Plugin.h>),
 +# so CSM_INCLUDE_DIR must be the directory *containing* csm/, not csm/ itself.
-+# Searching for "csm/csm.h" with no PATH_SUFFIXES returns that parent directory.
-+# Using PATH_SUFFIXES "csm" instead returns .../include/csm, which makes the
-+# compiler look for .../include/csm/csm/Plugin.h and fails. On Linux the injected
-+# -I$PREFIX/include masks that; on Windows nothing does, so the build breaks there.
++# Searching for "csm/csm.h" with no PATH_SUFFIXES returns that parent directory;
++# PATH_SUFFIXES "csm" would return .../include/csm, making the compiler look for
++# .../include/csm/csm/Plugin.h. On Linux the injected -I$PREFIX/include masks
++# that; on Windows nothing does, so the build fails there.
 +#
-+# The unqualified searches pick up CMAKE_PREFIX_PATH, which both build.sh and
-+# bld.bat set; the explicit PATHS are fallbacks covering $PREFIX/include and the
-+# Windows %LIBRARY_INC% / %LIBRARY_LIB% layout.
++# The explicit PATHS cover $CONDA_PREFIX and $PREFIX plus the Windows
++# %LIBRARY_INC% / %LIBRARY_LIB% layout; CMAKE_PREFIX_PATH (set by both build.sh
++# and bld.bat) is searched as well.
 +find_path(CSM_INCLUDE_DIR NAMES "csm/csm.h"
 +                          PATHS $ENV{CONDA_PREFIX}/include
 +                                $ENV{PREFIX}/include
@@ -63,7 +68,7 @@ index c469185..e8302d0 100644
  
    # Nlohmann JSON
    find_package(nlohmann_json REQUIRED)
-@@ -94,16 +96,12 @@ if(USGSCSM_EXTERNAL_DEPS)
+@@ -94,16 +112,12 @@ if(USGSCSM_EXTERNAL_DEPS)
    set(PROJ_TARGET PROJ::proj)
    add_library(usgscsm SHARED ${USGSCSM_SRC_FILES})
  else()
@@ -81,7 +86,7 @@ index c469185..e8302d0 100644
      set(PROJ_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/PROJ")
      set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/PROJ/cmake ${CMAKE_MODULE_PATH})
      set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/PROJ/src ${CMAKE_MODULE_PATH})
-@@ -679,10 +677,6 @@ else()
+@@ -679,10 +693,6 @@ else()
                              $<INSTALL_INTERFACE:include>
                              PRIVATE)
  
@@ -92,7 +97,7 @@ index c469185..e8302d0 100644
    set(ALE_LINKS nlohmann_json::nlohmann_json
                  Eigen3::Eigen
    )
-@@ -704,9 +698,7 @@ else()
+@@ -704,9 +714,7 @@ else()
    set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC" )
    set( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC" )
  
@@ -103,7 +108,7 @@ index c469185..e8302d0 100644
  endif(USGSCSM_EXTERNAL_DEPS)
  
  set_target_properties(usgscsm PROPERTIES
-@@ -745,8 +737,7 @@ endif()
+@@ -746,8 +754,7 @@ endif()
  
  add_executable(usgscsm_cam_test bin/usgscsm_cam_test.cc)
  target_link_libraries(usgscsm_cam_test
@@ -111,8 +116,8 @@ index c469185..e8302d0 100644
 -    ${CSM_LIBRARY})
 +    usgscsm)
  
- install(TARGETS usgscsm LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/csmplugins/)
- install(DIRECTORY ${USGSCSM_INSTALL_INCLUDE_DIRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+ install(TARGETS usgscsm
+         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 -- 
 2.50.1 (Apple Git-155)
 
