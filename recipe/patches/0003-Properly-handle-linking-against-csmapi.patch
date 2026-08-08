@@ -22,18 +22,32 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index c469185..e8302d0 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -69,15 +69,17 @@ set(USGSCSM_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include/usgscsm"
+@@ -69,15 +69,29 @@ set(USGSCSM_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include/usgscsm"
                           "${CMAKE_CURRENT_SOURCE_DIR}"
  )
  
-+# CSM API library
-+find_path(CSM_INCLUDE_DIR NAMES "csm.h"
-+                          PATH_SUFFIXES "csm"
-+                          PATHS $ENV{CONDA_PREFIX}/include/
++# CSM API library.
++#
++# Sources include the CSM headers with the csm/ prefix (#include <csm/Plugin.h>),
++# so CSM_INCLUDE_DIR must be the directory *containing* csm/, not csm/ itself.
++# Searching for "csm/csm.h" with no PATH_SUFFIXES returns that parent directory.
++# Using PATH_SUFFIXES "csm" instead returns .../include/csm, which makes the
++# compiler look for .../include/csm/csm/Plugin.h and fails. On Linux the injected
++# -I$PREFIX/include masks that; on Windows nothing does, so the build breaks there.
++#
++# The unqualified searches pick up CMAKE_PREFIX_PATH, which both build.sh and
++# bld.bat set; the explicit PATHS are fallbacks covering $PREFIX/include and the
++# Windows %LIBRARY_INC% / %LIBRARY_LIB% layout.
++find_path(CSM_INCLUDE_DIR NAMES "csm/csm.h"
++                          PATHS $ENV{CONDA_PREFIX}/include
 +                                $ENV{PREFIX}/include
 +                                $ENV{LIBRARY_INC}
 +                          REQUIRED)
-+find_library(CSM_LIBRARY csmapi PATHS $ENV{CONDA_PREFIX}/lib REQUIRED)
++find_library(CSM_LIBRARY NAMES csmapi
++                         PATHS $ENV{CONDA_PREFIX}/lib
++                               $ENV{PREFIX}/lib
++                               $ENV{LIBRARY_LIB}
++                         REQUIRED)
 +message("-- Found CSM Library: ${CSM_LIBRARY}")
 +message("-- Found CSM Include Directory: ${CSM_INCLUDE_DIR}")
 +
