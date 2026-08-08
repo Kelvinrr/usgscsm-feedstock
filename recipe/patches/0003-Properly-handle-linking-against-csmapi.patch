@@ -21,34 +21,19 @@ search the Windows %LIBRARY_INC% / %LIBRARY_LIB% prefixes as well. Fixes
 "Cannot open include file: 'csm/Plugin.h'" on win_64_ and "RasterGM.h: No
 such file or directory" on linux_aarch64_.
 ---
- CMakeLists.txt | 55 ++++++++++++++++++++++++++++++++++---------------------
- 1 file changed, 34 insertions(+), 21 deletions(-)
+ CMakeLists.txt | 40 +++++++++++++++++++---------------------
+ 1 file changed, 19 insertions(+), 21 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 235e79b..6cdd9b3 100644
+index 235e79b..70d2bf4 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -69,15 +69,39 @@ set(USGSCSM_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include/usgscsm"
+@@ -69,15 +69,24 @@ set(USGSCSM_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include/usgscsm"
                           "${CMAKE_CURRENT_SOURCE_DIR}"
  )
  
-+# CSM API library.
-+#
-+# The sources include CSM headers BOTH ways -- some prefixed
-+# (#include <csm/Plugin.h>) and some bare (#include <RasterGM.h>), sometimes for
-+# the same header -- so both the parent of csm/ and csm/ itself must be on the
-+# include path. Locate the parent by searching for "csm/csm.h" (a NAMES value
-+# containing a slash resolves relative to each searched directory, so the result
-+# is the parent, not csm/), then add the csm/ subdirectory alongside it.
-+#
-+# Using PATH_SUFFIXES "csm" instead yields only .../include/csm, which breaks the
-+# prefixed includes; searching only for the parent breaks the bare ones. On Linux
-+# the injected -I$PREFIX/include happens to cover the prefixed form, which is why
-+# only Windows failed before.
-+#
-+# The explicit PATHS cover $CONDA_PREFIX and $PREFIX plus the Windows
-+# %LIBRARY_INC% / %LIBRARY_LIB% layout; CMAKE_PREFIX_PATH (set by both build.sh
-+# and bld.bat) is searched as well.
++# CSM API library. The sources include CSM headers both as <csm/Plugin.h> and as
++# <RasterGM.h>, so both the parent of csm/ and csm/ itself must be on the path.
 +find_path(CSM_INCLUDE_ROOT NAMES "csm/csm.h"
 +                           PATHS $ENV{CONDA_PREFIX}/include
 +                                 $ENV{PREFIX}/include
@@ -75,7 +60,7 @@ index 235e79b..6cdd9b3 100644
  
    # Nlohmann JSON
    find_package(nlohmann_json REQUIRED)
-@@ -94,16 +118,12 @@ if(USGSCSM_EXTERNAL_DEPS)
+@@ -94,16 +103,12 @@ if(USGSCSM_EXTERNAL_DEPS)
    set(PROJ_TARGET PROJ::proj)
    add_library(usgscsm SHARED ${USGSCSM_SRC_FILES})
  else()
@@ -93,7 +78,7 @@ index 235e79b..6cdd9b3 100644
      set(PROJ_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/PROJ")
      set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/PROJ/cmake ${CMAKE_MODULE_PATH})
      set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/PROJ/src ${CMAKE_MODULE_PATH})
-@@ -679,10 +699,6 @@ else()
+@@ -679,10 +684,6 @@ else()
                              $<INSTALL_INTERFACE:include>
                              PRIVATE)
  
@@ -104,7 +89,7 @@ index 235e79b..6cdd9b3 100644
    set(ALE_LINKS nlohmann_json::nlohmann_json
                  Eigen3::Eigen
    )
-@@ -704,9 +720,7 @@ else()
+@@ -704,9 +705,7 @@ else()
    set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC" )
    set( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC" )
  
@@ -115,7 +100,7 @@ index 235e79b..6cdd9b3 100644
  endif(USGSCSM_EXTERNAL_DEPS)
  
  set_target_properties(usgscsm PROPERTIES
-@@ -746,8 +760,7 @@ endif()
+@@ -746,8 +745,7 @@ endif()
  
  add_executable(usgscsm_cam_test bin/usgscsm_cam_test.cc)
  target_link_libraries(usgscsm_cam_test
